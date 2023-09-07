@@ -34,11 +34,34 @@ function tlc_register_post_type()
    'public' => false,
    'show_ui' => true,
    'show_in_rest' => false,
+   'taxonomies' => array('category'),
   );
 
 
   register_post_type('tlc_duck',$args);
 }
+
+function tlc_activate() {
+  error_log("Activate Ducks");
+  tlc_register_post_type();
+  flush_rewrite_rules();
+}
+
+function tlc_deactivate() {
+  error_log("Deactivate Ducks");
+  unregister_post_type('tlc_duck');
+}
+
+
+function tlc_uninstall() {
+  error_log("Uninstall Ducks");
+}
+
+add_action('init','tlc_register_post_type');
+register_activation_hook(__FILE__,'tlc_activate');
+register_deactivation_hook(__FILE__,'tlc_deactivate');
+register_uninstall_hook(__FILE__,'tlc_uninstall');
+
 
 function tlc_handle_shortcode()
 {
@@ -46,10 +69,29 @@ function tlc_handle_shortcode()
 
   $form_uri = $_SERVER['REQUEST_URI'];
 
+  $ducks = get_posts(
+    array(
+    'post_type' => 'tlc_duck',
+    'numberposts' => -1,
+    )
+  );
+
+  $nducks = count($ducks);
+  error_log("$nducks found");
+  error_log(print_r($ducks,true));
+
+  echo "<pre>";
+  print_r($ducks);
+  echo "</pre>";
 ?>
 <form method=post action='<?=$form_uri?>'>
-  <input type=hidden name=action value=add_duck>
+  <input type=hidden name=add_duck value=1>
   <input type=submit value="Add a duck">
+</form>
+
+<form method=post action='<?=$form_uri?>'>
+  <input type=hidden name=remove_ducks value=1>
+  <input type=submit value"Remove all ducks">
 </form>
 
 <?php
@@ -63,39 +105,31 @@ function tlc_add_duck()
   error_log("Add a duck");
   $duck_args = array(
     'post_content' => 'test duck',
-    'post_title' => 'ducky duck',
+    'post_title' => 'darkwing duck',
     'post_type' => 'tlc_duck',
+    'post_status' => 'publish',
+
   );
-  error_log(print_r($duck_args,true));
   $post_id = wp_insert_post($duck_args,true);
   error_log("added duck: $post_id");
-
-  $qargs = array(
-    'post_type' => 'tlc_duck',
-  );
-
-  $duck_posts = new WP_Query($qargs);
-  if($duck_posts->have_posts())
-  {
-    while($duck_posts->have_posts())
-    {
-      $duck = $duck_posts->the_post();
-      error_log(print_r($duck,true));
-    }
-  }
-  else
-  {
-    error_log("No ducks");
-  }
 }
 
-add_action('init','tlc_register_post_type');
+function tlc_remove_ducks()
+{
+  error_log("Remove all ducks");
+}
+
 add_shortcode('duck-posts','tlc_handle_shortcode');
 
-$action = $_POST['action'] ?? "";
-if( $action == 'add_duck')
+if( array_key_exists('add_duck',$_POST) )
 {
   error_log("Need to add a duck");
   add_action('init','tlc_add_duck');
+}
+
+if( array_key_exists('remove_ducks',$_POST) )
+{
+  error_log("Need to remove all ducks");
+  add_action('init','tlc_remove_ducks');
 }
 
