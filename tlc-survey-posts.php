@@ -69,21 +69,44 @@ function tlc_handle_shortcode()
 
   $form_uri = $_SERVER['REQUEST_URI'];
 
-  $ducks = get_posts(
+  $duck_ids = get_posts(
     array(
-    'post_type' => 'tlc_duck',
-    'numberposts' => -1,
+      'post_type' => 'tlc_duck',
+      'numberposts' => -1,
+      'meta_key' => 'bio',
+      'fields' => 'ids',
     )
   );
 
-  $nducks = count($ducks);
-  error_log("$nducks found");
-  error_log(print_r($ducks,true));
+  $ids = implode(", ",$duck_ids);
+  echo "<h2>$ids</h2>";
 
-  echo "<pre>";
-  print_r($ducks);
-  echo "</pre>";
+  $ducks = get_posts(
+    array(
+      'post_type' => 'tlc_duck',
+      'numberposts' => -1,
+    )
+  );
 ?>
+<table>
+  <tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Content</th>
+    <th>Bio</th>
+  </tr>
+<?php foreach( $ducks as $duck ) { 
+  $id = $duck->ID;
+  $bio = get_post_meta($id,'bio',true);
+?>
+  <tr>
+    <td><?=$duck->ID?></td>
+    <td><?=$duck->post_title?></td>
+    <td><?=$duck->post_content?></td>
+    <td><?=$bio?></td>
+  </tr>
+<?php } ?>
+</table>
 <form method=post action='<?=$form_uri?>'>
   <input type=hidden name=add_duck value=1>
   <input type=submit value="Add a duck">
@@ -91,7 +114,7 @@ function tlc_handle_shortcode()
 
 <form method=post action='<?=$form_uri?>'>
   <input type=hidden name=remove_ducks value=1>
-  <input type=submit value"Remove all ducks">
+  <input type=submit value="Remove all ducks">
 </form>
 
 <?php
@@ -112,11 +135,26 @@ function tlc_add_duck()
   );
   $post_id = wp_insert_post($duck_args,true);
   error_log("added duck: $post_id");
+
+  $bio_id = update_post_meta($post_id,'bio',"well hello there");
+  error_log("added bio metadata: $bio_id");
 }
 
 function tlc_remove_ducks()
 {
   error_log("Remove all ducks");
+  $duck_ids = get_posts(
+    array(
+    'post_type' => 'tlc_duck',
+    'numberposts' => -1,
+    'fields' => 'ids',
+    )
+  );
+  foreach( $duck_ids as $id )
+  {
+    error_log("Removing duck $id");
+    wp_delete_post($id,true);
+  }
 }
 
 add_shortcode('duck-posts','tlc_handle_shortcode');
